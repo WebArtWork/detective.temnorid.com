@@ -1,0 +1,91 @@
+# Temnorid: Detective (Темнорід: Детектив)
+
+**Four sacks of grain are gone and the night watchman is dead. Who do you believe, or do you say we do not know?** A short, offline, fixed-camera detective adventure for **Windows**, in the world of [Temnorid](https://temnorid.com), built on the [IT Kamianets 3D Engine](https://3d.itkamianets.com) with Unity 6000.6. The game's text is in Ukrainian.
+
+You walk through the village of Greyford, inspect the places where things happened, question the people who might know something, compare what they said with what you found, and then tell the elder whom you report, or that the evidence is not enough. **You can be wrong, and a wrong report is a normal ending**, not a game over. Nothing in the game ever tells you whether you were right. First playthrough about 15–25 minutes.
+
+**Status:** version 0.1.0, first playable MVP. Website: https://detective.temnorid.com · Download: not published yet (no repository or release exists, so the page shows "Coming soon" instead of a made-up link).
+
+> The case's hidden truth is developer-only (`design/CASE_01.md`). This README, the website and the game never reveal it.
+
+## How it plays
+
+| Area | What there is |
+|---|---|
+| Camera | Fixed cinematic shots in four zones (granary yard, square, watch post, ford), 7 shots in all, cut or glide at borders. Chosen by volumes with a priority and a 0.3 m hysteresis, so standing on a border never flickers. |
+| Movement | WASD or arrows, Shift to move faster. Movement is relative to the camera as it was when the key went down, so a cut never turns held input around (tested across two shots that face different ways, in both directions). |
+| Inspecting | One key (E), one prompt at a time, only for what is in plain view within about 2 m. Ten clues. A clue is recorded the first time and can be read again for free. |
+| Conversations | Five people, hand-written and deterministic. Topics can be asked again (the answer is the same and nothing is recorded twice). Four follow-up questions appear only after you have found the clue they depend on, and they never name a clue you have not seen. |
+| Case board | Four tabs: Evidence (with pins), People (profiles, statements, discrepancies), Timeline (each time marked as observed, reported or estimated, and uncertain where it is), Decision. A "discrepancy" is only two things that do not agree; the board never says who is lying and shows no guilt percentage. |
+| The report | Accuse one of three suspects or report insufficient evidence, optionally naming up to three clues as reasons. A neutral warning says the decision can be wrong, you confirm once, and it cannot be undone in that run. You can report after looking at any one clue at the granary; you do not have to find everything. |
+| The ending | The village's response to your *report* (what it does), never a verdict on the truth. Four authored endings. Then Replay (a fresh case) or the menu. |
+| Saving | One local slot, written atomically after new clues, new statements, a change of place and the report. Continue puts you back where you were (never inside a wall). A damaged save is reported and you can start a new case. |
+| Online | None. The Lords incident is a local stand-in (the result screen says plainly that nothing was sent or changed). The mock report has no field for the real culprit or for "correct". |
+
+### Controls
+
+| Action | Keys |
+|---|---|
+| Move | WASD or arrow keys |
+| Move faster | Left Shift |
+| Inspect / talk | E |
+| Journal | J |
+| Case board | Tab |
+| Back, close, pause | Esc |
+| Menus, topics and the board | Mouse, or arrows and Enter |
+
+## Run it
+
+1. Open the folder in Unity Hub with Unity **6000.6** (the project references the shared Temnorid packages by local path: `file:../../3d-unity-*`, so keep it next to `D:\work\temnorid\` and those folders).
+2. Menu **Temnorid > Detective > Build Scene** rebuilds `Assets/Scenes/Village.unity` from primitives (it is generated, do not edit it by hand), then press Play.
+
+From the command line:
+
+```bash
+Unity.exe -batchmode -nographics -projectPath . -executeMethod Temnorid.Detective.EditorTools.DetectiveSceneBuilder.Build -quit
+Unity.exe -batchmode -nographics -projectPath . -runTests -testPlatform EditMode
+Unity.exe -batchmode -nographics -projectPath . -runTests -testPlatform PlayMode
+Unity.exe -batchmode -nographics -projectPath . -executeMethod Temnorid.Detective.EditorTools.DetectiveReleaseBuilder.BuildWindows -quit
+"ISCC.exe" installer\Detective.iss
+```
+
+(Do not pass `-quit` together with `-runTests`.) The build is `Builds/Windows/TemnoridDetective/TemnoridDetective.exe` plus a zip; the installer is `Builds/Installer/Temnorid-Detective-Setup.exe`. See `TEST_REPORT.md` for what the tests expect and what was observed.
+
+## Layout
+
+```text
+Assets/Scenes/Village.unity     the one scene: title, brief, village and screens (see "Differences")
+Assets/Scripts/                 DetectiveRules (the case content and the pure rules: Investigation, conflicts, verdict, save data, mock report),
+                                VillageLayout (every position), Loc (all text), DetectiveGame (the case as played),
+                                DetectiveHud (screens), Player, Npc, Interactable, Figure, DetectiveAudio
+Assets/Scripts/Editor/          DetectiveSceneBuilder, DetectiveReleaseBuilder
+Assets/Shaders/WorldText.shader depth-tested text for the name tags
+Assets/Tests/                   EditMode and PlayMode
+design/                         the design documents this game was built from (GAME, MVP, LORDS, CASE_01, AGENT, overview)
+docs/index.html, docs/CNAME     the website (detective.temnorid.com)
+installer/Detective.iss         Inno Setup script
+```
+
+Packages (all local, see `Packages/manifest.json`): `3d-unity-core`, `3d-unity-input` (the only input entry point; the extra actions `Journal` and `Board` are added with `AddMap`), `3d-unity-save` (atomic save), `3d-unity-ui`, `3d-unity-synth` (the generated sounds), `3d-unity-graybox`, `3d-unity-feedback`, `3d-unity-combat` (only because feedback depends on it) and **`3d-unity-fixed-camera`** (shot volumes with priority and hysteresis, held-input basis, close-up override), which the Escape game already uses. No `3d-detective-*` package exists; all story logic is in this game.
+
+## Gap report and differences from the guides
+
+- The fixed-view constructor repository and the live package catalog could not be read (no network access in the build environment), so nothing was assumed from them. The camera package above is game-neutral and has no story code in it. `3d-unity-character`, `3d-unity-audio`, `3d-unity-assets` and `3d-unity-scene` are not used: the player is Unity's `CharacterController`, the sounds are generated in code, and the scene is built from primitives. Escape is not a dependency (only the camera package is shared).
+- The guides name `Main.unity` as the entry and `Village.unity` as the gameplay scene. Here there is **one scene, `Village.unity`**, with the title screen as an overlay on it (the opening and closing shots use the camera's close-up override), as in the other Temnorid games.
+- The village is one walkable area: the yard of the granary, the square, the watch post and the ford are joined by paths, with nothing locked.
+- Texts are Ukrainian only (English is optional in the guide); every line is in `Loc.cs`. Clue and person ids are logical and never change with the language.
+- Stefan has no dialogue; his body is the injury clue (e03). Everything is made of primitives with stable asset ids (`AssetIdTag`); the site's `/models` page lists them so they can be replaced with generated models later.
+
+## Not verified / limitations
+
+- Played with a bot through the real scene and looked at in the editor (title, brief, shots in all four zones, dialogue, clue and board screens, the result screen); not played by a human from start to finish with a real keyboard, and the Windows installer was built but not installed.
+- No gamepad, no English text, no voice or music; the sounds are simple generated tones and a river-and-murmur ambience. Characters are blocks that turn to face you, with a swinging walk.
+- Online: no Lords connection. A downloadable offline game can be modified, so nothing here may count as proof of anything in Lords; see `design/LORDS.md`.
+
+## Deferred backlog
+
+More cases (burglary, missing person, sabotage, embezzlement), accomplices, false confessions and planted clues, village variants and a case generator owned by Lords, voice and animated cutscenes, an English dictionary and other languages, gamepad, trials and appeals, magic that helps but never guarantees truth, real Lords synchronisation (a sanitised case projection in, a non-binding report out).
+
+## Release
+
+Windows installer or zip attached to a GitHub Release, and the "Download" button on `docs/index.html` pointing at that asset. TODO: create the repository and the release; until then the button is disabled.

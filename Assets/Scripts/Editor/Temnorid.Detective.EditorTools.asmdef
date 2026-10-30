@@ -1,0 +1,22 @@
+{
+  "allowUnsafeCode": false,
+  "noEngineReferences": false,
+  "versionDefines": [],
+  "defineConstraints": [],
+  "name": "Temnorid.Detective.EditorTools",
+  "rootNamespace": "Temnorid.Detective.EditorTools",
+  "references": [
+    "Temnorid.Detective",
+    "ITKamianets.Engine.Feedback",
+    "ITKamianets.Engine.Graybox",
+    "ITKamianets.Engine.Graybox.Editor",
+    "ITKamianets.Engine.FixedCamera"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false
+}

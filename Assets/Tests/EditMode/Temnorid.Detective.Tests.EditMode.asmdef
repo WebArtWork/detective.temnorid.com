@@ -1,0 +1,25 @@
+{
+  "allowUnsafeCode": false,
+  "noEngineReferences": false,
+  "versionDefines": [],
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "name": "Temnorid.Detective.Tests.EditMode",
+  "rootNamespace": "Temnorid.Detective.Tests",
+  "references": [
+    "Temnorid.Detective",
+    "ITKamianets.Engine.Save",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false
+}
