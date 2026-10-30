@@ -4,7 +4,7 @@
 
 You walk through the village of Greyford, inspect the places where things happened, question the people who might know something, compare what they said with what you found, and then tell the elder whom you report, or that the evidence is not enough. **You can be wrong, and a wrong report is a normal ending**, not a game over. Nothing in the game ever tells you whether you were right. First playthrough about 15–25 minutes.
 
-**Status:** version 0.1.0, first playable MVP. Website: https://detective.temnorid.com · Download: not published yet (no repository or release exists, so the page shows "Coming soon" instead of a made-up link).
+**Status:** version 0.1.0, first playable MVP. Website: https://detective.temnorid.com · Download: [Temnorid-Detective-Setup.exe](https://github.com/WebArtWork/detective.temnorid.com/releases/latest/download/Temnorid-Detective-Setup.exe).
 
 > The case's hidden truth is developer-only (`design/CASE_01.md`). This README, the website and the game never reveal it.
 
@@ -88,4 +88,4 @@ More cases (burglary, missing person, sabotage, embezzlement), accomplices, fals
 
 ## Release
 
-Windows installer or zip attached to a GitHub Release, and the "Download" button on `docs/index.html` pointing at that asset. TODO: create the repository and the release; until then the button is disabled.
+Windows installer or zip attached to a GitHub Release, and the "Download" button on `docs/index.html` pointing at that asset. The first release (v0.1.0) is published and the button points at its installer.
