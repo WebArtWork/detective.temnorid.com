@@ -4,7 +4,7 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Temnorid: Detective</title>
-	<meta name="description" content="Temnorid: Detective is a short offline investigation: walk a medieval village, inspect clues, question residents, compare their accounts and report whom you believe, or that the evidence is not enough. You can be wrong.">
+	<meta name="description" content="Temnorid: Detective is a short investigation, alone or with a second investigator: walk a medieval village, inspect clues, question residents, compare their accounts and report whom you believe, or that the evidence is not enough. You can be wrong.">
 	<link rel="canonical" href="https://detective.temnorid.com/">
 	<meta property="og:type" content="website">
 	<meta property="og:title" content="Temnorid: Detective">
@@ -68,7 +68,7 @@
 	<main>
 		<div class="hero">
 			<div class="wrap">
-				<p class="eyebrow">A Temnorid game · Windows, Android, iOS · version 0.2.0</p>
+				<p class="eyebrow">A Temnorid game · Windows · Android and iOS builds not published yet · version 0.2.0</p>
 				<h1>Temnorid: Detective</h1>
 				<p class="tagline">Investigate, interview, decide. You can be wrong.</p>
 				<p class="lead">Four sacks of grain are missing from the granary of Greyford, and the night watchman is dead. Walk the village, read what was left behind, hear the people out, compare their accounts, and tell the elder whom you believe, or that we do not know. About 15–25 minutes, seen through classic fixed cameras. The text of the game is in Ukrainian.</p>
@@ -97,9 +97,9 @@
 					<li>Fixed cinematic cameras in every part of the village, with smooth cuts and controls that never turn around on you.</li>
 					<li>Discrepancies are only marked as "accounts differ": you decide what they mean.</li>
 					<li>Autosave, Continue, and a fresh case on every replay.</li>
-					<li>Play alone offline, or share the village with a second investigator (one hosts, one joins): a shared notebook, and the host files the report.</li>
-					<li>Phones: a thumb stick, an Action button and the journal and case board on a bottom bar (Android and iOS builds from Unity Build Profiles).</li>
-					<li>Updates: the Windows game updates itself from the newest GitHub release; the profile can turn it off.</li>
+					<li>Play alone, or share the village with a second investigator (one hosts, one joins): a shared notebook, and the host files the report.</li>
+					<li>Touch controls for phones, and a Windows game that updates itself.</li>
+					<li>A sign-in screen like the one in Lords (Google or guest), which you can skip: the whole case plays without an account.</li>
 				</ul>
 				<h3>Case 01: The Missing Grain</h3>
 				<p>Greyford, one night. The granary is short of four sacks and its watchman did not see the morning. Start at the granary, and go wherever the trail takes you.</p>
@@ -123,8 +123,38 @@
 						<tr><td>Menus, topics and the board</td><td>Mouse, or arrows and Enter</td></tr>
 					</tbody>
 				</table>
+				<p class="fine">Keyboard and mouse, or touch on a phone (see Phones). Your case is saved on your PC.</p>
 				<h3>System requirements and limitations</h3>
-				<p>Windows 10 or newer, 64-bit, a graphics card that runs Direct3D 11. The game is light; it has not been measured on a range of machines, so no frame-rate promises are made. This is an early-access first version: one case, Ukrainian text only, no voice, no gamepad.</p>
+				<p>Windows 10 or newer, 64-bit, a graphics card that runs Direct3D 11. The game is light; it has not been measured on a range of machines, so no frame-rate promises are made. This is an early-access version: one case, Ukrainian text only, no voice, no gamepad.</p>
+			</div>
+		</section>
+
+		<section id="others">
+			<div class="wrap">
+				<h2>Playing with others</h2>
+				<p>Two investigators can share one village. Choose <strong>Play with others</strong> in the main menu: one player hosts, the other joins with the address it shows or an online code. Each of you walks with your own fixed camera and sees the other in the village. The host owns the case: clues, statements, discrepancies, pins and the report. What you inspect or ask is checked by the host and then shows in both notebooks. The guest can lean toward a choice on the decision board, but only the host files the report, and the ending is shown to both. Online cases are not saved, so your own saved case is never touched. If the guest leaves, the host goes on alone; if the host leaves, the guest returns to the menu.</p>
+			</div>
+		</section>
+
+		<section id="phones">
+			<div class="wrap">
+				<h2>Phones</h2>
+				<p>Android and iOS builds are made from Unity Build Profiles. On a phone there is a thumb stick, an Action button (inspect or talk), a Run button and a pause button, and the journal and case board are tabs on the bottom bar. They have not been tried on a device yet, and no phone build is published.</p>
+			</div>
+		</section>
+
+		<section id="updates">
+			<div class="wrap">
+				<h2>Updates</h2>
+				<p>The Windows game updates itself from the newest GitHub release when it starts. You can turn this off in Profile.</p>
+			</div>
+		</section>
+
+		<section id="lords">
+			<div class="wrap">
+				<h2>Part of the world of Temnorid</h2>
+				<p>The first time you press Play, a sign-in screen like the one in Lords offers <strong>Sign in with Google</strong> (on Windows, when it is set up on the device), <strong>Play as a guest</strong> or <strong>Play offline</strong>. You can sign in later from Profile, and a signed-in player starts with their Google name. The case plays the same with or without an account, and offline.</p>
+				<p>Detective does not read or write anything in Lords: the Lords incident in this version is a local stand-in, and your report changes nothing in Lords.</p>
 			</div>
 		</section>
 
@@ -132,6 +162,11 @@
 			<div class="wrap">
 				<h2>Download</h2>
 				<p><a class="btn" href="https://github.com/WebArtWork/detective.temnorid.com/releases/latest/download/Temnorid-Detective-Setup.exe">Download Temnorid-Detective-Setup.exe</a></p>
+				<ol>
+					<li>Download the installer and run it.</li>
+					<li>Windows may warn about an unknown publisher, because the installer is not signed yet. Choose <strong>More info</strong>, then <strong>Run anyway</strong>.</li>
+					<li>Start Temnorid: Detective from the Start menu.</li>
+				</ol>
 				<p class="fine">Requires Windows 10 or later, 64-bit. All releases and release notes: <a href="https://github.com/WebArtWork/detective.temnorid.com/releases">GitHub Releases</a>.</p>
 			</div>
 		</section>
