@@ -1,10 +1,10 @@
 # Temnorid: Detective (Темнорід: Детектив)
 
-**Four sacks of grain are gone and the night watchman is dead. Who do you believe, or do you say we do not know?** A short, offline, fixed-camera detective adventure for **Windows**, in the world of [Temnorid](https://temnorid.com), built on the [IT Kamianets 3D Engine](https://3d.itkamianets.com) with Unity 6000.6. The game's text is in Ukrainian.
+**Four sacks of grain are gone and the night watchman is dead. Who do you believe, or do you say we do not know?** A short, fixed-camera detective adventure for **Windows, Android and iOS**, to play alone or as two investigators, in the world of [Temnorid](https://temnorid.com), built on the [IT Kamianets 3D Engine](https://3d.itkamianets.com) with Unity 6000.6. The game's text is in Ukrainian.
 
 You walk through the village of Greyford, inspect the places where things happened, question the people who might know something, compare what they said with what you found, and then tell the elder whom you report, or that the evidence is not enough. **You can be wrong, and a wrong report is a normal ending**, not a game over. Nothing in the game ever tells you whether you were right. First playthrough about 15–25 minutes.
 
-**Status:** version 0.1.0, first playable MVP. Website: https://detective.temnorid.com · Download: [Temnorid-Detective-Setup.exe](https://github.com/WebArtWork/detective.temnorid.com/releases/latest/download/Temnorid-Detective-Setup.exe).
+**Status:** version 0.2.0 (shared shell, light co-op, phone controls, self-updating Windows build). Website: https://detective.temnorid.com · Download: [Temnorid-Detective-Setup.exe](https://github.com/WebArtWork/detective.temnorid.com/releases/latest/download/Temnorid-Detective-Setup.exe).
 
 > The case's hidden truth is developer-only (`design/CASE_01.md`). This README, the website and the game never reveal it.
 
@@ -20,7 +20,7 @@ You walk through the village of Greyford, inspect the places where things happen
 | The report | Accuse one of three suspects or report insufficient evidence, optionally naming up to three clues as reasons. A neutral warning says the decision can be wrong, you confirm once, and it cannot be undone in that run. You can report after looking at any one clue at the granary; you do not have to find everything. |
 | The ending | The village's response to your *report* (what it does), never a verdict on the truth. Four authored endings. Then Replay (a fresh case) or the menu. |
 | Saving | One local slot, written atomically after new clues, new statements, a change of place and the report. Continue puts you back where you were (never inside a wall). A damaged save is reported and you can start a new case. |
-| Online | None. The Lords incident is a local stand-in (the result screen says plainly that nothing was sent or changed). The mock report has no field for the real culprit or for "correct". |
+| Online | Two investigators in one village (see "Playing with others"). No Lords connection: the Lords incident is a local stand-in (the result screen says plainly that nothing was sent or changed). The mock report has no field for the real culprit or for "correct". |
 
 ### Controls
 
@@ -33,6 +33,25 @@ You walk through the village of Greyford, inspect the places where things happen
 | Case board | Tab |
 | Back, close, pause | Esc |
 | Menus, topics and the board | Mouse, or arrows and Enter |
+
+On a phone: the left thumb stick walks, **Action** inspects or talks, **Run** goes faster, **II** pauses; the journal and the case board are places on the bar at the bottom.
+
+## Playing with others
+
+From the Menu scene choose **Play with others**: one player hosts (direct address, or the relay code), the other joins, and both load the village. Two investigators at most; nobody needs the other to go on.
+
+- **The host owns the case**: the clues, the statements, the discrepancies, the pins and the report. Each investigator walks on their own machine, with their own fixed camera, and is shown to the other from the pose it publishes (about 15 times a second).
+- **Inspecting, asking and pinning are requests to the host.** The host checks that the clue or the person exists, that the guest stood close enough when it asked (its last pose, with a little slack) and that the topic is open, then records it. The discovered state (what a save file holds: found clues, places seen, topics spoken, statements, discrepancies, pins, the clock) is sent to both, whenever it changes and every two seconds, so both notebooks agree. The hidden truth of the case is not part of it and never travels.
+- **The report is the host's.** The guest sees the decision board and can lean toward a choice, which the host sees as a line; only the host confirms. The ending is then shown to both. Starting the case over is the host's too, and sends the guest back to the brief.
+- **An online case is never saved**, so a guest's own offline case is left alone. If the guest leaves, the host goes on alone; if the host leaves, the guest returns to the menu.
+
+## Updates
+
+The Windows game updates itself: at start-up the Boot scene looks at the newest GitHub release of `WebArtWork/detective.temnorid.com` and, if it is newer, runs its installer silently and starts the game again. The Profile place can turn this off.
+
+## Phones
+
+Android and iOS builds come from Unity Build Profiles (the scene list is Boot, Menu, Village; landscape; Android minimum API 26, 64-bit IL2CPP; iOS 15). The stick, the Action, Run and Pause buttons appear only on phones and tablets, texts are enlarged there, and the shell's bars respect the safe area. Not yet built or tried on a device.
 
 ## Run it
 
@@ -54,8 +73,8 @@ Unity.exe -batchmode -nographics -projectPath . -executeMethod Temnorid.Detectiv
 ## Layout
 
 ```text
-Assets/Scenes/Village.unity     the one scene: title, brief, village and screens (see "Differences")
-Assets/Scripts/                 DetectiveRules (the case content and the pure rules: Investigation, conflicts, verdict, save data, mock report),
+Assets/Scenes/                  Boot and Menu (the shared shell), Village (the one game scene: start screen, brief, village and screens, see "Differences")
+Assets/Scripts/                 DetectiveShell (shell configuration, places), DetectiveNet and RemoteInvestigator (light co-op), TouchStick (phones), DetectiveRules (the case content and the pure rules: Investigation, conflicts, verdict, save data, mock report),
                                 VillageLayout (every position), Loc (all text), DetectiveGame (the case as played),
                                 DetectiveHud (screens), Player, Npc, Interactable, Figure, DetectiveAudio
 Assets/Scripts/Editor/          DetectiveSceneBuilder, DetectiveReleaseBuilder
@@ -66,7 +85,7 @@ docs/index.html, docs/CNAME     the website (detective.temnorid.com)
 installer/Detective.iss         Inno Setup script
 ```
 
-Packages (all local, see `Packages/manifest.json`): `3d-unity-core`, `3d-unity-input` (the only input entry point; the extra actions `Journal` and `Board` are added with `AddMap`), `3d-unity-save` (atomic save), `3d-unity-ui`, `3d-unity-synth` (the generated sounds), `3d-unity-graybox`, `3d-unity-feedback`, `3d-unity-combat` (only because feedback depends on it) and **`3d-unity-fixed-camera`** (shot volumes with priority and hysteresis, held-input basis, close-up override), which the Escape game already uses. No `3d-detective-*` package exists; all story logic is in this game.
+Packages (see `Packages/manifest.json`): the shared `3d-unity-shell`, `3d-unity-net` and `3d-unity-update` (local paths `file:../../`), and `3d-unity-core`, `3d-unity-input` (the only input entry point; the extra actions `Journal` and `Board` are added with `AddMap`), `3d-unity-save` (atomic save), `3d-unity-ui`, `3d-unity-synth` (the generated sounds), `3d-unity-graybox`, `3d-unity-feedback`, `3d-unity-combat` (only because feedback depends on it) and **`3d-unity-fixed-camera`** (shot volumes with priority and hysteresis, held-input basis, close-up override), which the Escape game already uses. No `3d-detective-*` package exists; all story logic is in this game.
 
 ## Gap report and differences from the guides
 
@@ -80,6 +99,7 @@ Packages (all local, see `Packages/manifest.json`): `3d-unity-core`, `3d-unity-i
 
 - Played with a bot through the real scene and looked at in the editor (title, brief, shots in all four zones, dialogue, clue and board screens, the result screen); not played by a human from start to finish with a real keyboard, and the Windows installer was built but not installed.
 - No gamepad, no English text, no voice or music; the sounds are simple generated tones and a river-and-murmur ambience. Characters are blocks that turn to face you, with a swinging walk.
+- Co-op was tested with a host on the real scene and a second session in the same process; not yet played by two people on two machines or over the relay. Phones are not tested on a device.
 - Online: no Lords connection. A downloadable offline game can be modified, so nothing here may count as proof of anything in Lords; see `design/LORDS.md`.
 
 ## Deferred backlog
@@ -88,4 +108,10 @@ More cases (burglary, missing person, sabotage, embezzlement), accomplices, fals
 
 ## Release
 
-Windows installer or zip attached to a GitHub Release, and the "Download" button on `docs/index.html` pointing at that asset. The first release (v0.1.0) is published and the button points at its installer.
+Windows installer or zip attached to a GitHub Release, and the "Download" button on `docs/index.html` pointing at that asset. The first release (v0.1.0) is published and the button points at its installer. Version 0.2.0 is the next release; a build made with this version only plays with builds of the same major.minor.
+
+## Development notes
+
+- Authority: rules that decide the outcome (the investigation, the report) run only where `NetSession.IsAuthority` is true (offline and on the host); `DetectiveGame.IsGuest` is true on the joiner, whose notebook is a mirror (`ApplyMirror`). Single player is unchanged when no session is online.
+- The online code is `DetectiveNet.cs` (events `dt.state`, `dt.hi`, `dt.inspect`, `dt.ask`, `dt.pin`, `dt.lean`, `dt.no`) and the online test is `Assets/Tests/PlayMode/OnlineDetectiveTests.cs` (direct join on test port 7808).
+- The shell is configured in `DetectiveShell.cs` (game id `detective`, places Case, Journal, Board and the shell's Profile).

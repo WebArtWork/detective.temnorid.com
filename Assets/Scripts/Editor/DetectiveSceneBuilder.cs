@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using ITKamianets.Engine.FixedCamera;
 using ITKamianets.Engine.Graybox;
 using ITKamianets.Engine.Graybox.EditorTools;
+using ITKamianets.Engine.Shell.Editor;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.SceneManagement;
@@ -26,9 +27,7 @@ namespace Temnorid.Detective.EditorTools
 		[MenuItem("Temnorid/Detective/Build Scene")]
 		public static void Build()
 		{
-			PlayerSettings.productName = "Temnorid Detective";
-			PlayerSettings.companyName = "Temnorid";
-			PlayerSettings.bundleVersion = "0.1.0";
+			ShellSceneKit.ApplyPlatformSettings("Temnorid", "Temnorid Detective", "com.itkamianets.detective", "0.2.0");
 			PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Standalone, "com.itkamianets.temnoriddetective");
 			PlayerSettings.runInBackground = true;
 			PlayerSettings.fullScreenMode = FullScreenMode.FullScreenWindow;
@@ -90,7 +89,10 @@ namespace Temnorid.Detective.EditorTools
 			hud.Game = game;
 
 			EditorSceneManager.SaveScene(scene, ScenePath);
-			EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+			// Boot and Menu open new scenes: the village is saved by now and nothing of it is needed below.
+			ShellSceneKit.BuildBoot();
+			ShellSceneKit.BuildMenu();
+			ShellSceneKit.SetBuildOrder(ScenePath);
 			AssetDatabase.SaveAssets();
 			Debug.Log("[Detective] Scene built: " + ScenePath);
 		}

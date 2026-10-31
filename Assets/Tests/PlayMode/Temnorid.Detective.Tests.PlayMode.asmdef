@@ -12,7 +12,8 @@
     "ITKamianets.Engine.Save",
     "ITKamianets.Engine.FixedCamera",
     "UnityEngine.TestRunner",
-    "UnityEditor.TestRunner"
+    "UnityEditor.TestRunner",
+    "ITKamianets.Engine.Net"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Text;
+using ITKamianets.Engine.Shell;
 using ITKamianets.Engine.UI;
 using UnityEngine;
 using UnityEngine.UI;
@@ -46,6 +47,10 @@ namespace Temnorid.Detective
 		Text _confirmText, _confirmWarn;
 		Text _resultReport, _resultElder, _resultResult, _resultVillage, _resultStats, _resultReasons, _resultMock;
 		Text _masterText, _sfxText, _fullscreenText;
+		Button _restartButton, _replayButton;
+		Text _netNote;
+		ShellChrome _chrome;
+		TouchButton _actButton, _pauseButton, _runButton;
 		Mode _shown = (Mode)(-1);
 		string _selectedEvidence;
 
@@ -59,7 +64,22 @@ namespace Temnorid.Detective
 				ButtonPressed = new Color(0.8f, 0.65f, 0.3f),
 			};
 			UiBuilder.EnsureEventSystem(transform);
-			var root = UiBuilder.CreateCanvas(transform).transform;
+			var canvas = UiBuilder.CreateCanvas(transform);
+			var canvasRoot = canvas.transform;
+
+			// The shell's bars frame the screen: top bar, and on phones a bottom bar of places. Everything below lives between them.
+			_chrome = ShellChrome.Create(transform);
+			_chrome.PlaceSelected += OnPlace;
+			var safe = new GameObject("Safe", typeof(RectTransform), typeof(SafeAreaFitter));
+			safe.transform.SetParent(canvasRoot, false);
+			var content = new GameObject("Content", typeof(RectTransform));
+			content.transform.SetParent(safe.transform, false);
+			var contentRect = (RectTransform)content.transform;
+			contentRect.anchorMin = new Vector2(0f, _chrome.BottomFraction);
+			contentRect.anchorMax = new Vector2(1f, 1f - _chrome.TopFraction);
+			contentRect.offsetMin = Vector2.zero;
+			contentRect.offsetMax = Vector2.zero;
+			var root = content.transform;
 			BuildHud(root);
 			BuildInspect(root);
 			BuildDialogue(root);
@@ -71,7 +91,8 @@ namespace Temnorid.Detective
 			BuildSettings(root);
 			BuildBrief(root);
 			BuildTitle(root);
-			var fade = UiBuilder.Box("Fade", root, Vector2.zero, Vector2.one, Color.black);
+			if (TouchButton.IsNeeded) BuildTouch(_hud.transform);
+			var fade = UiBuilder.Box("Fade", canvasRoot, Vector2.zero, Vector2.one, Color.black);
 			_fade = fade.GetComponent<Image>();
 			_fade.raycastTarget = false;
 			_fade.color = Color.clear;
@@ -87,12 +108,15 @@ namespace Temnorid.Detective
 				onClick();
 			});
 			var label = button.GetComponentInChildren<Text>();
-			label.fontSize = size;
+			label.fontSize = Fs(size);
 			return button;
 		}
 
+		/// <summary>On a phone nothing is read smaller than about 24 points of the 1080-high canvas.</summary>
+		static int Fs(int size) => TouchButton.IsNeeded ? Mathf.RoundToInt(Mathf.Max(size * 1.15f, 24f)) : size;
+
 		Text Lbl(Transform parent, string text, int size, TextAnchor anchor, float x0, float y0, float x1, float y1, Color colour, bool wrap = false)
-			=> _ui.Label("Label", parent, text, size, anchor, new Vector2(x0, y0), new Vector2(x1, y1), colour, wrap);
+			=> _ui.Label("Label", parent, text, Fs(size), anchor, new Vector2(x0, y0), new Vector2(x1, y1), colour, wrap);
 
 		static GameObject Screen(string name, Transform root, Color colour, float x0 = 0f, float y0 = 0f, float x1 = 1f, float y1 = 1f)
 			=> UiBuilder.Box(name, root, new Vector2(x0, y0), new Vector2(x1, y1), colour);
@@ -105,23 +129,13 @@ namespace Temnorid.Detective
 		{
 			_title = Screen("Title", root, new Color(0.05f, 0.04f, 0.03f, 0.55f));
 			var t = _title.transform;
-			Lbl(t, Loc.T("title"), 92, TextAnchor.MiddleCenter, 0.1f, 0.68f, 0.9f, 0.88f, Gold);
-			Lbl(t, Loc.T("subtitle"), 46, TextAnchor.MiddleCenter, 0.1f, 0.6f, 0.9f, 0.7f, Ink);
+			// The game's name is on the shell's bar and the Menu scene; this first place starts, continues or tunes the case.
+			Lbl(t, Loc.T("subtitle"), 92, TextAnchor.MiddleCenter, 0.1f, 0.66f, 0.9f, 0.86f, Gold);
 			Btn(t, Loc.T("menu.new"), 0.35f, 0.46f, 0.65f, 0.55f, () => Game.NewCase());
 			_titleContinue = Btn(t, Loc.T("menu.continue"), 0.35f, 0.35f, 0.65f, 0.44f, () => Game.ContinueCase()).gameObject;
 			Btn(t, Loc.T("menu.settings"), 0.35f, 0.24f, 0.65f, 0.33f, () => Game.OpenSettings());
-			Btn(t, Loc.T("menu.quit"), 0.35f, 0.13f, 0.65f, 0.22f, Quit);
 			_titleNote = Lbl(t, "", 30, TextAnchor.MiddleCenter, 0.1f, 0.06f, 0.9f, 0.12f, new Color(1f, 0.6f, 0.5f));
 			Lbl(t, Loc.T("menu.demo"), 26, TextAnchor.LowerCenter, 0.1f, 0.0f, 0.9f, 0.05f, Muted);
-		}
-
-		static void Quit()
-		{
-#if UNITY_EDITOR
-			UnityEditor.EditorApplication.isPlaying = false;
-#else
-			Application.Quit();
-#endif
 		}
 
 		void BuildBrief(Transform root)
@@ -144,12 +158,48 @@ namespace Temnorid.Detective
 			var info = UiBuilder.Box("InfoBox", t, new Vector2(0.6f, 0.89f), new Vector2(0.985f, 0.985f), new Color(0f, 0f, 0f, 0.55f));
 			_zone = Lbl(info.transform, "", 28, TextAnchor.UpperRight, 0.03f, 0.5f, 0.97f, 0.97f, Ink);
 			_count = Lbl(info.transform, "", 24, TextAnchor.LowerRight, 0.03f, 0.04f, 0.97f, 0.5f, Muted);
+			var phone = TouchButton.IsNeeded;
 			var keys = UiBuilder.Box("KeysBox", t, new Vector2(0.52f, 0.008f), new Vector2(0.985f, 0.05f), new Color(0f, 0f, 0f, 0.5f));
 			Lbl(keys.transform, Loc.T("keys"), 22, TextAnchor.MiddleRight, 0.02f, 0f, 0.98f, 1f, new Color(0.9f, 0.85f, 0.75f));
-			_promptBox = UiBuilder.Box("PromptBox", t, new Vector2(0.25f, 0.07f), new Vector2(0.75f, 0.14f), new Color(0f, 0f, 0f, 0.7f));
+			keys.SetActive(!phone);
+			_promptBox = UiBuilder.Box("PromptBox", t, phone ? new Vector2(0.22f, 0.07f) : new Vector2(0.25f, 0.07f), phone ? new Vector2(0.64f, 0.16f) : new Vector2(0.75f, 0.14f), new Color(0f, 0f, 0f, 0.7f));
 			_prompt = Lbl(_promptBox.transform, "", 34, TextAnchor.MiddleCenter, 0f, 0f, 1f, 1f, Gold);
-			_toastBox = UiBuilder.Box("ToastBox", t, new Vector2(0.2f, 0.17f), new Vector2(0.8f, 0.26f), new Color(0f, 0f, 0f, 0.7f));
+			_toastBox = UiBuilder.Box("ToastBox", t, phone ? new Vector2(0.2f, 0.76f) : new Vector2(0.2f, 0.17f), phone ? new Vector2(0.8f, 0.86f) : new Vector2(0.8f, 0.26f), new Color(0f, 0f, 0f, 0.7f));
 			_toast = Lbl(_toastBox.transform, "", 30, TextAnchor.MiddleCenter, 0.02f, 0f, 0.98f, 1f, Ink, true);
+		}
+
+		// Phones: a stick for walking, one button for the action (look at, talk to), one for running, one for the pause menu.
+		// The journal and the case board are places on the shell's bottom bar.
+		void BuildTouch(Transform hud)
+		{
+			var stick = TouchStick.Create(hud, new Vector2(0.03f, 0.06f), new Vector2(0.19f, 0.42f));
+			_actButton = TouchButton.Create(_ui, hud, Loc.T("touch.act"), new Vector2(0.8f, 0.08f), new Vector2(0.97f, 0.28f), 44);
+			_runButton = TouchButton.Create(_ui, hud, Loc.T("touch.run"), new Vector2(0.66f, 0.17f), new Vector2(0.78f, 0.3f), 34);
+			_pauseButton = TouchButton.Create(_ui, hud, Loc.T("touch.pause"), new Vector2(0.46f, 0.89f), new Vector2(0.54f, 0.985f), 40);
+			if (Game != null && Game.Player != null)
+			{
+				Game.Player.Stick = stick;
+				Game.Player.RunButton = _runButton;
+			}
+		}
+
+		void OnPlace(string id)
+		{
+			if (Game == null) return;
+			switch (id)
+			{
+				case DetectiveShell.PlaceCase:
+					if (Game.Mode == Mode.Journal || Game.Mode == Mode.Board) Game.ClosePanel();
+					break;
+				case DetectiveShell.PlaceJournal:
+					Game.OpenPanel(Mode.Journal);
+					if (Game.Mode != Mode.Journal) _chrome.Select(DetectiveShell.PlaceCase, false);
+					break;
+				case DetectiveShell.PlaceBoard:
+					Game.OpenBoard(Game.Tab);
+					if (Game.Mode != Mode.Board) _chrome.Select(DetectiveShell.PlaceCase, false);
+					break;
+			}
 		}
 
 		void BuildInspect(Transform root)
@@ -284,6 +334,7 @@ namespace Temnorid.Detective
 			}
 			_decisionNote = Lbl(t, Loc.T("decision.warn"), 26, TextAnchor.MiddleLeft, 0.01f, 0.2f, 0.5f, 0.35f, Ink, true);
 			_decisionLocked = Lbl(t, Loc.T("decision.locked"), 24, TextAnchor.MiddleLeft, 0.01f, 0.1f, 0.6f, 0.2f, new Color(1f, 0.7f, 0.5f), true);
+			_netNote = Lbl(t, "", 22, TextAnchor.MiddleLeft, 0.01f, 0.0f, 0.58f, 0.1f, Muted, true);
 			_submitButton = Btn(t, Loc.T("confirm"), 0.6f, 0.02f, 0.99f, 0.14f, () => Game.RequestReport(), 28).gameObject;
 		}
 
@@ -309,8 +360,8 @@ namespace Temnorid.Detective
 			_resultReasons = Lbl(panel, "", 24, TextAnchor.UpperLeft, 0.05f, 0.22f, 0.95f, 0.3f, Muted, true);
 			_resultStats = Lbl(panel, "", 26, TextAnchor.MiddleLeft, 0.05f, 0.15f, 0.95f, 0.22f, Ink);
 			_resultMock = Lbl(panel, Loc.T("result.mock"), 22, TextAnchor.MiddleLeft, 0.05f, 0.1f, 0.95f, 0.16f, Muted, true);
-			Btn(panel, Loc.T("replay"), 0.1f, 0.01f, 0.48f, 0.09f, () => Game.Replay(), 28);
-			Btn(panel, Loc.T("menu"), 0.52f, 0.01f, 0.9f, 0.09f, () => Game.ToTitle(), 28);
+			_replayButton = Btn(panel, Loc.T("replay"), 0.1f, 0.01f, 0.48f, 0.09f, () => Game.Replay(), 28);
+			Btn(panel, Loc.T("menu"), 0.52f, 0.01f, 0.9f, 0.09f, () => ShellFlow.QuitToMenu(), 28);
 		}
 
 		void BuildPause(Transform root)
@@ -322,8 +373,8 @@ namespace Temnorid.Detective
 			Btn(panel, Loc.T("journal"), 0.1f, 0.55f, 0.9f, 0.68f, () => Game.OpenPanel(Mode.Journal));
 			Btn(panel, Loc.T("board"), 0.1f, 0.4f, 0.9f, 0.53f, () => Game.OpenBoard(BoardTab.Evidence));
 			Btn(panel, Loc.T("menu.settings"), 0.1f, 0.25f, 0.9f, 0.38f, () => Game.OpenSettings());
-			Btn(panel, Loc.T("restart"), 0.1f, 0.12f, 0.9f, 0.23f, () => Game.RestartInvestigation(), 26);
-			Btn(panel, Loc.T("menu"), 0.1f, 0.01f, 0.9f, 0.11f, () => Game.ToTitle(), 26);
+			_restartButton = Btn(panel, Loc.T("restart"), 0.1f, 0.12f, 0.9f, 0.23f, () => Game.RestartInvestigation(), 26);
+			Btn(panel, Loc.T("menu"), 0.1f, 0.01f, 0.9f, 0.11f, () => ShellFlow.QuitToMenu(), 26);
 		}
 
 		void BuildSettings(Transform root)
@@ -338,7 +389,7 @@ namespace Temnorid.Detective
 			Btn(t, "−", 0.52f, 0.57f, 0.58f, 0.67f, () => Game.SetVolumes(Game.Settings.masterVolume, Game.Settings.sfxVolume - 0.1f));
 			Btn(t, "+", 0.6f, 0.57f, 0.66f, 0.67f, () => Game.SetVolumes(Game.Settings.masterVolume, Game.Settings.sfxVolume + 0.1f));
 			_fullscreenText = Btn(t, "", 0.3f, 0.44f, 0.7f, 0.54f, () => Game.SetFullscreen(!Game.Settings.fullscreen), 34).GetComponentInChildren<Text>();
-			Lbl(t, Loc.T("controls"), 30, TextAnchor.MiddleCenter, 0.12f, 0.22f, 0.88f, 0.4f, Muted, true);
+			Lbl(t, Loc.T(TouchButton.IsNeeded ? "controls.touch" : "controls"), 30, TextAnchor.MiddleCenter, 0.12f, 0.22f, 0.88f, 0.4f, Muted, true);
 			Btn(t, Loc.T("back"), 0.38f, 0.06f, 0.62f, 0.16f, () => Game.CloseSettings());
 		}
 
@@ -354,6 +405,17 @@ namespace Temnorid.Detective
 				_shown = mode;
 			}
 			Refresh(mode);
+
+			if (_actButton != null && _actButton.ConsumePress() && mode == Mode.Playing) Game.Interact();
+			if (_pauseButton != null && _pauseButton.ConsumePress() && mode == Mode.Playing) Game.Pause();
+
+			// The bar's highlighted place follows what the game shows (the keys open the journal and the board too).
+			if (_chrome != null && !_chrome.ProfileOpen)
+			{
+				var want = mode == Mode.Journal ? DetectiveShell.PlaceJournal : mode == Mode.Board ? DetectiveShell.PlaceBoard : DetectiveShell.PlaceCase;
+				if (_chrome.CurrentPlace != want) _chrome.Select(want, false);
+			}
+			if (_restartButton != null) _restartButton.interactable = Game.CanRestart;
 		}
 
 		void Show(Mode mode)
@@ -567,13 +629,22 @@ namespace Temnorid.Detective
 				_reasonButtons[i].GetComponent<Image>().color = Game.DecisionReasons.Contains(e) ? Chosen : Plain;
 			}
 			_decisionLocked.gameObject.SetActive(!inv.CanReport);
-			_submitButton.SetActive(inv.CanReport && Game.HasChoice);
+			_submitButton.SetActive(inv.CanReport && Game.HasChoice && !Game.IsGuest);
+			var note = "";
+			if (Game.Online)
+			{
+				if (Game.IsGuest) note = Loc.T("net.host.only");
+				else if (Game.PartnerLean != null) note = Loc.T("net.lean", Game.PartnerLean == "-" ? Loc.T("decision.insufficient") : Loc.T("decision.accuse", Loc.T("p." + Game.PartnerLean)));
+				else note = Loc.T("net.host.note");
+			}
+			UiBuilder.SetText(_netNote, note);
 		}
 
 		void RefreshResolved()
 		{
 			var r = Game.Result;
 			if (r == null) return;
+			if (_replayButton != null) _replayButton.interactable = Game.CanRestart;
 			UiBuilder.SetText(_resultReport, Loc.T("result.report") + ": " + Loc.T("out." + r.OutcomeId + ".report"));
 			UiBuilder.SetText(_resultElder, Loc.T("result.response") + ": " + Loc.T("out." + r.OutcomeId + ".elder"));
 			UiBuilder.SetText(_resultResult, Loc.T("out." + r.OutcomeId + ".result"));

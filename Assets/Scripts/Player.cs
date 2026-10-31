@@ -19,6 +19,10 @@ namespace Temnorid.Detective
 		public Vector2? ScriptedInput;
 		public bool ScriptedRun;
 
+		/// <summary>Phones: the on-screen stick and run button, read like the keys when a finger is on them.</summary>
+		public TouchStick Stick;
+		public ITKamianets.Engine.Shell.TouchButton RunButton;
+
 		CharacterController _body;
 		Figure _figure;
 		float _vy;
@@ -89,6 +93,8 @@ namespace Temnorid.Detective
 					var actions = EngineInput.Default.Player;
 					input = actions.Move.ReadValue<Vector2>();
 					run = actions.Sprint.IsPressed();
+					if (Stick != null && Stick.Value.sqrMagnitude > 0.01f) input = Stick.Value;
+					if (RunButton != null && RunButton.Held) run = true;
 				}
 			}
 

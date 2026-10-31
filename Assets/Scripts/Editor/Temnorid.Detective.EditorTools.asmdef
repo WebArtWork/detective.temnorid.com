@@ -10,7 +10,9 @@
     "ITKamianets.Engine.Feedback",
     "ITKamianets.Engine.Graybox",
     "ITKamianets.Engine.Graybox.Editor",
-    "ITKamianets.Engine.FixedCamera"
+    "ITKamianets.Engine.FixedCamera",
+    "ITKamianets.Engine.Shell",
+    "ITKamianets.Engine.Shell.Editor"
   ],
   "includePlatforms": [
     "Editor"

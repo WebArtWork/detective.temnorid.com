@@ -15,7 +15,10 @@
     "ITKamianets.Engine.Graybox",
     "ITKamianets.Engine.UI",
     "ITKamianets.Engine.Synth",
-    "ITKamianets.Engine.FixedCamera"
+    "ITKamianets.Engine.FixedCamera",
+    "ITKamianets.Engine.Shell",
+    "ITKamianets.Engine.Net",
+    "ITKamianets.Engine.Update"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

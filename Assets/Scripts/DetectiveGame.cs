@@ -2,7 +2,9 @@ using System.Collections.Generic;
 using System.Linq;
 using ITKamianets.Engine.FixedCamera;
 using ITKamianets.Engine.Input;
+using ITKamianets.Engine.Net;
 using ITKamianets.Engine.Save;
+using ITKamianets.Engine.Shell;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -76,6 +78,17 @@ namespace Temnorid.Detective
 		public VerdictResult Result { get; private set; }
 		public MockReport Report { get; private set; }
 		public int Saves { get; private set; }
+
+		/// <summary>The link to the other investigator. Null unless the case was opened from an online lobby.</summary>
+		public DetectiveNet Net { get; private set; }
+		/// <summary>True while a session is shared: nothing is saved, and the host owns the case.</summary>
+		public bool Online => Net != null && NetSession.Instance.IsOnline;
+		/// <summary>True on the investigator who joined: the notebook is a mirror of the host's and the report is the host's.</summary>
+		public bool IsGuest => Online && NetSession.Instance.IsClient;
+		/// <summary>Starting over is the host's call when two investigate together.</summary>
+		public bool CanRestart => !IsGuest;
+		/// <summary>What the other investigator leans toward in the decision: an id, "-" for not enough evidence, or null.</summary>
+		public string PartnerLean { get; internal set; }
 		public string Zone { get; private set; } = Ids.Square;
 
 		float _nextStep;
@@ -101,6 +114,7 @@ namespace Temnorid.Detective
 			_journalKey = map.FindAction("Journal");
 			_boardKey = map.FindAction("Board");
 
+			ShellFlow.BeforeQuit += OnBeforeQuit;
 			Store = new DetectiveSaveStore(SaveRootOverride);
 			Settings = Store.LoadSettings();
 			ApplySettings();
@@ -115,11 +129,71 @@ namespace Temnorid.Detective
 			Player.Teleport(VillageLayout.PlayerStart, 0f);
 			Rig.Snap();
 			SetCinematic(true, OverviewCamera, OverviewLook);
+			if (NetSession.Instance.IsOnline)
+			{
+				Net = gameObject.AddComponent<DetectiveNet>();
+				Net.Init(this);
+				StartOnline();
+			}
 		}
 
 		void OnDestroy()
 		{
+			ShellFlow.BeforeQuit -= OnBeforeQuit;
 			if (Instance == this) Instance = null;
+		}
+
+		/// <summary>Leaving through the shell saves an offline case where it stands. An online case is never saved.</summary>
+		void OnBeforeQuit()
+		{
+			if (!Online && Mode != Mode.Title) SaveNow();
+		}
+
+		/// <summary>Where this investigator stands at the start: side by side with the other one, in the order of the roster.</summary>
+		public Vector2 StartSpot()
+		{
+			var players = NetSession.Instance.Players;
+			var slot = 0;
+			for (var i = 0; i < players.Count; i++) if (players[i].Id == NetSession.Instance.LocalId) slot = i;
+			var count = Mathf.Max(1, players.Count);
+			return VillageLayout.PlayerStart + new Vector2((slot - (count - 1) * 0.5f) * 1.4f, 0f);
+		}
+
+		/// <summary>Shared case: both investigators begin on the brief, each at their own spot. There is no title and no saved case.</summary>
+		void StartOnline()
+		{
+			ResetScreens();
+			Player.Teleport(StartSpot(), 0f);
+			Zone = Ids.Square;
+			Rig.Snap();
+			Mode = Mode.Brief;
+			SetCinematic(true, OverviewCamera, OverviewLook);
+		}
+
+		/// <summary>Guest: shows what the host's notebook says. A new case from the host starts the brief again.</summary>
+		internal void ApplyMirror(InvestigationSave save, bool newCase)
+		{
+			if (newCase)
+			{
+				Inv = new Investigation();
+				ResetScreens();
+				PartnerLean = null;
+				Player.SetVisible(true);
+				Player.Teleport(StartSpot(), 0f);
+				Zone = Ids.Square;
+				Rig.Snap();
+				Mode = Mode.Brief;
+				SetCinematic(true, OverviewCamera, OverviewLook);
+			}
+			if (!Inv.Load(save)) return;
+			if (Inv.Status == CaseStatus.Resolved && Mode != Mode.Resolved)
+			{
+				Result = new VerdictResult { Kind = Inv.Verdict.Value, AccusedId = Inv.AccusedId, OutcomeId = Inv.OutcomeId, Reasons = Inv.Reasons };
+				Report = MockReport.From(Result);
+				Mode = Mode.Resolved;
+				Audio.Play(Sfx.Bell);
+				SetCinematic(true, EndCamera, EndLook);
+			}
 		}
 
 		// ---- starting, saving ----
@@ -153,10 +227,17 @@ namespace Temnorid.Detective
 
 		public void NewCase()
 		{
+			if (IsGuest)
+			{
+				Toast(Loc.T("net.replay.host"));
+				return;
+			}
 			Inv = new Investigation();
+			PartnerLean = null;
+			if (Online) Net.NewEpoch();
 			ResetScreens();
 			Player.SetVisible(true);
-			Player.Teleport(VillageLayout.PlayerStart, 0f);
+			Player.Teleport(Online ? StartSpot() : VillageLayout.PlayerStart, 0f);
 			Zone = Ids.Square;
 			Rig.Snap();
 			Mode = Mode.Brief;
@@ -190,6 +271,7 @@ namespace Temnorid.Detective
 
 		public bool ContinueCase()
 		{
+			if (Online) return false;
 			var saved = Store.Load(out _);
 			var inv = new Investigation();
 			if (saved == null || !inv.Load(saved))
@@ -224,6 +306,7 @@ namespace Temnorid.Detective
 		/// <summary>Writes the save. Called after new clues, new statements, a change of place and the report.</summary>
 		public void SaveNow()
 		{
+			if (Online) return; // a shared case never touches the offline save
 			var p = Player != null ? Player.transform.position : Vector3.zero;
 			var save = Inv.ToSave(p.x, p.y, p.z, Player != null ? Player.Yaw : 0f, Rig != null ? Rig.ShotId : "");
 			if (Store.Save(save) == SaveStatus.Ok) Saves++;
@@ -296,7 +379,7 @@ namespace Temnorid.Detective
 
 		void PlayingFrame(float dt, EngineInput input, bool back)
 		{
-			Inv.ElapsedSeconds += dt;
+			if (!IsGuest) Inv.ElapsedSeconds += dt; // the guest's clock is the host's, mirrored
 			WatchZone();
 
 			Target = Interactable.Pick(Player.transform.position, Player.transform.forward, DetectiveConfig.InteractRange, _ => true);
@@ -336,15 +419,17 @@ namespace Temnorid.Detective
 			var zone = VillageLayout.ZoneAt(p.x, p.y);
 			if (zone == Zone && Inv.Visited(zone)) return;
 			Zone = zone;
-			if (Inv.VisitZone(zone)) SaveNow();
+			if (!IsGuest && Inv.VisitZone(zone)) SaveNow();
 		}
 
 		// ---- interaction ----
 
+		static string PromptKey => TouchButton.IsNeeded ? "prompt.touch" : "prompt";
+
 		string Prompt(Interactable item)
 		{
-			if (item.Kind == InteractKind.Talk) return Loc.T("prompt", Loc.T("verb.talk"), Loc.T("p." + item.Id + ".with"));
-			return Loc.T("prompt", Loc.T("verb.inspect"), Loc.T(item.Id + ".title").ToLowerInvariant());
+			if (item.Kind == InteractKind.Talk) return Loc.T(PromptKey, Loc.T("verb.talk"), Loc.T("p." + item.Id + ".with"));
+			return Loc.T(PromptKey, Loc.T("verb.inspect"), Loc.T(item.Id + ".title").ToLowerInvariant());
 		}
 
 		/// <summary>Uses what is in front of the player. Returns whether anything was done.</summary>
@@ -368,7 +453,7 @@ namespace Temnorid.Detective
 			ToastUntil = Time.unscaledTime + seconds;
 		}
 
-		void ToastNewConflicts(int before)
+		internal void ToastNewConflicts(int before)
 		{
 			for (var i = before; i < Inv.Conflicts.Count; i++)
 			{
@@ -383,15 +468,24 @@ namespace Temnorid.Detective
 		{
 			if (Mode != Mode.Playing && Mode != Mode.Board && Mode != Mode.Journal) return;
 			var before = Inv.Conflicts.Count;
-			InspectWasNew = Inv.Inspect(id);
+			if (IsGuest)
+			{
+				// The host decides what is recorded; the notebook follows when it says so.
+				InspectWasNew = CaseContent.FindEvidence(id) != null && !Inv.Has(id);
+				Net.RequestInspect(id);
+			}
+			else InspectWasNew = Inv.Inspect(id);
 			InspectId = id;
 			Mode = Mode.Inspect;
 			if (InspectWasNew)
 			{
 				Audio.Play(Sfx.Page);
-				Toast(Loc.T("new.evidence", Loc.T(id + ".title")));
-				ToastNewConflicts(before);
-				SaveNow();
+				if (!IsGuest)
+				{
+					Toast(Loc.T("new.evidence", Loc.T(id + ".title")));
+					ToastNewConflicts(before);
+					SaveNow();
+				}
 			}
 			else Audio.Play(Sfx.Click, 0.5f);
 		}
@@ -424,7 +518,14 @@ namespace Temnorid.Detective
 			if (topic == null || topic.Npc != NpcId) return null;
 			var was = Inv.HasSpoken(topicId);
 			var before = Inv.Conflicts.Count;
-			var result = Inv.Ask(topicId);
+			AskResult result;
+			if (IsGuest)
+			{
+				if (!Inv.TopicAvailable(topic)) return null;
+				result = new AskResult { Topic = topic, IsNewStatement = !was };
+				Net.RequestAsk(topicId);
+			}
+			else result = Inv.Ask(topicId);
 			if (result == null) return null;
 			QuestionText = Loc.T("q." + topicId);
 			AnswerText = Loc.T("a." + topicId);
@@ -494,6 +595,13 @@ namespace Temnorid.Detective
 
 		public void TogglePin(string evidenceId)
 		{
+			if (IsGuest)
+			{
+				if (!Inv.Has(evidenceId)) return;
+				Net.RequestPin(evidenceId);
+				Audio.Play(Sfx.Click, 0.5f);
+				return;
+			}
 			if (Inv.TogglePin(evidenceId)) Audio.Play(Sfx.Click, 0.5f);
 		}
 
@@ -504,6 +612,7 @@ namespace Temnorid.Detective
 			if (Mode != Mode.Board || !CaseContent.IsSuspect(suspectId)) return;
 			DecisionAccused = suspectId;
 			DecisionInsufficient = false;
+			if (Online) Net.SendLean(suspectId);
 		}
 
 		public void ChooseInsufficient()
@@ -511,6 +620,7 @@ namespace Temnorid.Detective
 			if (Mode != Mode.Board) return;
 			DecisionAccused = null;
 			DecisionInsufficient = true;
+			if (Online) Net.SendLean("-");
 		}
 
 		public bool ToggleReason(string evidenceId)
@@ -528,6 +638,11 @@ namespace Temnorid.Detective
 		public bool RequestReport()
 		{
 			if (Mode != Mode.Board) return false;
+			if (IsGuest)
+			{
+				Toast(Loc.T("net.host.only"));
+				return false;
+			}
 			if (!Inv.CanReport)
 			{
 				Toast(Loc.T("decision.locked"));
